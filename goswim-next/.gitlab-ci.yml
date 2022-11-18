@@ -1,0 +1,122 @@
+# Lanevision CLIENT CI/CD deployment##############
+image:
+  name: docker/compose:1.29.2 # update tag to whatever version you want to use.
+  entrypoint: ["/bin/sh", "-c"]
+
+variables:
+  PROJECT: lanevision
+  DEV_PORT: 5001
+  PROD_PORT: 5001
+  APP_PORT: 80
+  REGISTRY: dockerhub.aximsoft.com
+  #REGISTRY_USER: ASFDJAOWEUAASK 
+  #REGISTRY_PASSWORD: DFKDIEFJ3AOWEA3UW3J
+  LATEST_VER: '$REGISTRY/$PROJECT-$CI_PROJECT_NAME:$CI_PIPELINE_IID'
+  ANSIBLE_FORCE_COLOR: 'true'
+
+
+stages:
+  - Docker login
+  - Build dev image
+  - Build prod image
+  - Push to Docker Hub
+  - deploy-dev1
+ # - deploy-dev2
+  - deploy-production
+
+docker login:
+#  stage: Docker login
+#  script:
+#  - docker login -username "$REGISTRY_USER" --password "$REGISTRY_PASSWORD" "$REGISTRY"
+
+#before_script:
+  stage: Docker login
+  only:
+  - dev-branch
+  script:
+  - docker version
+  - docker-compose version
+  - echo "$REGISTRY_PASSWORD" | docker login -u "$REGISTRY_USER" --password-stdin $REGISTRY
+
+docker dev build:
+  stage: Build dev image
+  only:
+  - dev-branch
+  script:
+  - touch .env
+  - echo "NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID" >> .env
+  - echo "NEXT_PUBLIC_APPLE_CLIENT_ID=$NEXT_PUBLIC_APPLE_CLIENT_ID" >> .env
+  - echo "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY" >> .env
+  - cat .env
+  - docker info
+  - docker build -t $LATEST_VER .
+
+docker prod build:
+  stage: Build prod image
+  only:
+  - production
+  script:
+  - touch .env
+  - echo "NEXT_PUBLIC_GOOGLE_CLIENT_ID=$PROD_NEXT_PUBLIC_GOOGLE_CLIENT_ID" >> .env
+  - echo "NEXT_PUBLIC_APPLE_CLIENT_ID=$PROD_NEXT_PUBLIC_APPLE_CLIENT_ID" >> .env
+  - echo "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$PROD_NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY" >> .env
+  - cat .env
+  - docker info
+  - docker build -t $LATEST_VER .
+
+docker push:
+  stage: Push to Docker Hub
+  only:
+  - dev-branch
+  - production
+  script:
+  - echo "$REGISTRY_PASSWORD" | docker login -u "$REGISTRY_USER" --password-stdin $REGISTRY
+  - docker push $LATEST_VER && docker image rm $LATEST_VER
+
+## DEPLOYMENT STARTED AUTO/MANUAL
+deploy_dev1:
+  stage: deploy-dev1
+  environment:
+    name: development
+  only:
+  - dev-branch
+  before_script:
+    - apk add ansible python3
+    - apk update && apk add openssh
+    - ansible $PROJECT-dev -m ping
+  script:
+  - ansible-playbook -vv -e "HOST_NAMES=$PROJECT-dev1" -e "LATEST_VER=$LATEST_VER" -e "PROJECT=$PROJECT" -e "ENV=development" -e "CI_PROJECT_NAME=$CI_PROJECT_NAME" -e "PORTS=$DEV_PORT:$APP_PORT" main.yml
+  when: manual
+  allow_failure: false
+  only:
+  - dev-branch
+  
+#deploy_dev2:
+#  stage: deploy-dev2
+#  dependencies: [deploy_dev1]
+#  environment:
+#    name: development
+#  only:
+#  - dev-branch
+#  before_script:
+#    - apk add ansible python
+#    - apk update && apk add openssh
+#    - ansible $PROJECT-dev -m ping
+#  script:
+#  - ansible-playbook -vv -e "HOST_NAMES=$PROJECT-dev2" -e "LATEST_VER=$LATEST_VER" -e "PROJECT=$PROJECT" -e "ENV=development" -e "CI_PROJECT_NAME=$CI_PROJECT_NAME" -e "PORTS=$DEV_PORT:$APP_PORT" main.yml
+#  only:
+#  - dev-branch
+
+deploy_production:
+  stage: deploy-production
+  environment:
+    name: production
+  before_script:
+    - apk add ansible python
+    - apk update && apk add openssh
+    - ansible $PROJECT-production -m ping
+  script:
+  - ansible-playbook -e "HOST_NAMES=$PROJECT-production" -e "LATEST_VER=$LATEST_VER" -e "PROJECT=$PROJECT" -e "ENV=production" -e "CI_PROJECT_NAME=$CI_PROJECT_NAME" -e "PORTS=$PROD_PORT:$APP_PORT" main.yml
+  when: manual
+  only:
+  - production

@@ -1,0 +1,29 @@
+- hosts: "{{HOST_NAMES}}"
+  become: true
+  tasks:
+  - name: Log into dockerhub.aximsoft.com registry | force re-auth
+    docker_login:
+      registry: dockerhub.aximsoft.com
+      username: ASFDJAOWEUAASK
+      password: DFKDIEFJ3AOWEA3UW3J
+
+  - name: pull an image from dockerhub.aximsoft.com registry
+    docker_image:
+      name: "{{LATEST_VER}}"
+
+  - name: Deploy docker-containers - "{{CI_PROJECT_NAME}}"
+    docker_container:
+      name: "{{PROJECT}}_{{ENV}}_{{CI_PROJECT_NAME}}"
+      image: "{{LATEST_VER}}"
+      env:
+        ENV: "{{ENV}}"
+      recreate: yes
+      state: started
+      restart: yes
+      restart_policy: unless-stopped
+      ports:
+        - "{{PORTS}}"
+
+  - name: Log out of DockerHub.aximsoft.com
+    docker_login:
+      state: absent

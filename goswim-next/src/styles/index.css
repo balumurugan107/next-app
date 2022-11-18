@@ -1,0 +1,44 @@
+/* @font-face {
+    font-family: sfComponentRegular;
+    src: url('../fonts/SF-Compact-Display-Regular.ttf');
+}
+@font-face {
+    font-family: sfComponentMedium;
+    src: url('../fonts/SF-Compact-Display-Medium.ttf');
+}
+@font-face {
+    font-family: sfComponentSemibold;
+    src: url('../fonts/SF-Compact-Display-Semibold.ttf');
+} 
+@font-face {
+    font-family: brandonRegular;
+    src: url('../fonts/Brandon_reg.otf');
+}
+@font-face {
+    font-family: brandonMedium;
+    src: url('../fonts/Brandon_med.otf');
+}
+@font-face {
+    font-family: brandonBold;
+    src: url('../fonts/Brandon_bld.otf');
+}
+@font-face {
+    font-family: tisaSansProRegular;
+    src: url('../fonts/TisaSansPro-Regular.ttf');
+}
+@font-face {
+    font-family: tisaSansProMedium;
+    src: url('../fonts/TisaSansPro-Medium.ttf');
+}
+@font-face {
+    font-family: tisaSansProBold;
+    src: url('../fonts/TisaSansPro-Bold.ttf');
+}
+
+body{
+    font-family: tisaSansProRegular;
+}
+button{
+    font-family: brandonMedium !important;
+}
+ */
